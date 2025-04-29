@@ -4,18 +4,24 @@ import com.google.inject.Provides;
 import java.time.Instant;
 import java.util.Locale;
 import javax.inject.Inject;
+
 import net.runelite.api.ChatMessageType;
+import net.runelite.api.Skill;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.events.StatChanged;
+
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.Text;
 
 @PluginDescriptor(
         name = "Pet Roll Counter",
-        description = "Tracks Tangleroot pet-roll attempts per patch",
-        tags = {"pet", "farming", "counter"}
+        description = "Tracks Tangleroot pet-roll attempts",
+        tags = {"pet","farming","counter"}
 )
 public class PetRollCounterPlugin extends Plugin
 {
@@ -24,35 +30,32 @@ public class PetRollCounterPlugin extends Plugin
     @Inject private OverlayManager overlayManager;
     @Inject private PetRollCounterOverlay overlay;
 
-    private boolean seaweedReady;
-    private boolean mushroomReady;
+    // Chat-based flags
+    private boolean seaweedReady = true, mushroomReady = true;
 
-    private int seaweedCount,
-            cactusCount,
-            belladonnaCount,
-            mushroomCount,
-            papayaCount,
-            appleCount,
-            teakCount,
-            mahoganyCount,
-            redwoodCount,
-            calquatCount,
-            hesporiCount,
-            willowCount,
-            magicCount,
-            yewCount,
-            celastrusCount,
+    // Last tree clicked “check-health” on
+    private String lastCheckTarget = null;
+    private long    lastCheckTime = 0L;
+    // Last seen Farming XP
+    private int lastFarmingXp = -1;
+
+    // Counters
+    private int seaweedCount, mushroomCount,
+            cactusCount, belladonnaCount, papayaCount,
+            appleCount, teakCount, mahoganyCount,
+            redwoodCount, calquatCount, hesporiCount,
+            willowCount, magicCount, yewCount, celastrusCount,
             sessionCount;
-
     private Instant sessionStart;
 
     @Override
     protected void startUp() throws Exception
     {
+        // Load persisted totals
         seaweedCount    = config.seaweedCount();
+        mushroomCount   = config.mushroomCount();
         cactusCount     = config.cactusCount();
         belladonnaCount = config.belladonnaCount();
-        mushroomCount   = config.mushroomCount();
         papayaCount     = config.papayaCount();
         appleCount      = config.appleCount();
         teakCount       = config.teakCount();
@@ -65,10 +68,9 @@ public class PetRollCounterPlugin extends Plugin
         yewCount        = config.yewCount();
         celastrusCount  = config.celastrusCount();
 
-        seaweedReady = true;
-        mushroomReady = true;
-        sessionCount = 0;
-        sessionStart = Instant.now();
+        sessionCount   = 0;
+        sessionStart   = Instant.now();
+        lastFarmingXp  = -1;  // will be set on first StatChanged
 
         overlayManager.add(overlay);
     }
@@ -79,11 +81,12 @@ public class PetRollCounterPlugin extends Plugin
         overlayManager.remove(overlay);
     }
 
+    // === SEAWEED, MUSHROOM & HESPORI (chat triggers) ===
     @Subscribe
     public void onChatMessage(ChatMessage event)
     {
-        ChatMessageType type = event.getType();
-        if (type != ChatMessageType.GAMEMESSAGE && type != ChatMessageType.SPAM)
+        if (event.getType() != ChatMessageType.GAMEMESSAGE &&
+                event.getType() != ChatMessageType.SPAM)
         {
             return;
         }
@@ -91,7 +94,7 @@ public class PetRollCounterPlugin extends Plugin
         String msg = event.getMessage().toLowerCase(Locale.ROOT);
 
         // Seaweed
-        if (msg.contains("you plant a seaweed spore"))
+        if (msg.contains("you plant a seaweed"))
         {
             seaweedReady = true;
         }
@@ -99,124 +102,152 @@ public class PetRollCounterPlugin extends Plugin
         {
             seaweedReady = false;
             seaweedCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "seaweedCount", seaweedCount);
+            configManager.setConfiguration("petRollCounter","seaweedCount",seaweedCount);
         }
 
-        // Cactus
-        if (msg.equals("you pick some cactus spines."))
-        {
-            cactusCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "cactusCount", cactusCount);
-        }
-
-        // Belladonna
-        if (msg.equals("you harvest some cave nightshade."))
-        {
-            belladonnaCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "belladonnaCount", belladonnaCount);
-        }
-
-        //
-        // MUSHROOM: one line per harvest
-        //
-
+        // Mushroom
         if (msg.contains("you plant a bittercap mushroom"))
         {
             mushroomReady = true;
         }
-        else if (msg.equals("you pick a bittercap mushroom.") && mushroomReady)
+        else if (msg.contains("you pick a bittercap mushroom") && mushroomReady)
         {
             mushroomReady = false;
-            mushroomCount++;
-            sessionCount++;
-            configManager.setConfiguration("petRollCounter", "mushroomCount", mushroomCount);
-        }
-
-        // Papaya
-        if (msg.equals("you examine the health of the papaya tree."))
-        {
-            papayaCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "papayaCount", papayaCount);
-        }
-
-        // Apple
-        if (msg.equals("you examine the health of the apple tree."))
-        {
-            appleCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "appleCount", appleCount);
-        }
-
-        // Teak
-        if (msg.equals("you examine the health of the teak tree."))
-        {
-            teakCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "teakCount", teakCount);
-        }
-
-        // Mahogany
-        if (msg.equals("you examine the health of the mahogany tree."))
-        {
-            mahoganyCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "mahoganyCount", mahoganyCount);
-        }
-
-        // Redwood
-        if (msg.equals("you examine the health of the redwood tree."))
-        {
-            redwoodCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "redwoodCount", redwoodCount);
-        }
-
-        // Calquat
-        if (msg.equals("you examine the calquat tree for signs of disease and find that it is in perfect health."))
-        {
-            calquatCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "calquatCount", calquatCount);
+            mushroomCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter","mushroomCount",mushroomCount);
         }
 
         // Hespori
         if (msg.contains("you harvest the hespori"))
         {
             hesporiCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "hesporiCount", hesporiCount);
-        }
-
-        // Willow
-        if (msg.equals("you examine the health of the willow tree."))
-        {
-            willowCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "willowCount", willowCount);
-        }
-
-        // Magic
-        if (msg.equals("you examine the health of the magic tree."))
-        {
-            magicCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "magicCount", magicCount);
-        }
-
-        // Yew
-        if (msg.equals("you examine the health of the yew tree."))
-        {
-            yewCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "yewCount", yewCount);
-        }
-
-        // Celastrus
-        if (msg.equals("you examine the health of the celastrus tree."))
-        {
-            celastrusCount++; sessionCount++;
-            configManager.setConfiguration("petRollCounter", "celastrusCount", celastrusCount);
+            configManager.setConfiguration("petRollCounter","hesporiCount",hesporiCount);
         }
     }
 
-    public int getSessionCount() { return sessionCount; }
+    // === RECORD TREE “CHECK-HEALTH” CLICK ===
+    @Subscribe
+    public void onMenuOptionClicked(MenuOptionClicked ev)
+    {
+        String option = ev.getMenuOption().toLowerCase(Locale.ROOT);
+        // we want both the tree “check-health” and herb “harvest”/“pick” clicks
+        if (!option.equals("check-health") &&
+                !option.equals("harvest") &&
+                !option.equals("pick"))
+        {
+            return;
+        }
 
+        // strip any color tags off the object name
+        String target = Text.removeTags(ev.getMenuTarget()).toLowerCase(Locale.ROOT);
+
+        // store whichever object you clicked so the next Farming XP drop (within 10s)
+        // can be attributed correctly
+        lastCheckTarget = target;
+        lastCheckTime   = System.currentTimeMillis();
+    }
+
+    // === ONLY COUNT ON ACTUAL FARMING XP GAIN ===
+    @Subscribe
+    public void onStatChanged(StatChanged e)
+    {
+        if (e.getSkill() != Skill.FARMING)
+        {
+            return;
+        }
+
+        int xp = e.getXp();
+        if (lastFarmingXp < 0)
+        {
+            // first time we see Farming XP, just record it
+            lastFarmingXp = xp;
+            return;
+        }
+        long delta = System.currentTimeMillis() - lastCheckTime;
+        if (delta > 15_000L)
+        {
+            // too slow → ignore this tree click
+            lastCheckTarget = null;
+            lastFarmingXp   = xp;
+            return;
+        }
+        if (xp <= lastFarmingXp || lastCheckTarget == null)
+        {
+            // either no xp gain or no pending tree click
+            return;
+        }
+
+        // real Farming XP gain + a valid tree target → count!
+        switch (lastCheckTarget)
+        {
+            case "cactus":
+                cactusCount++;
+                configManager.setConfiguration("petRollCounter","cactusCount",cactusCount);
+                break;
+            case "belladonna":
+                belladonnaCount++;
+                configManager.setConfiguration("petRollCounter","belladonnaCount",belladonnaCount);
+                break;
+            case "papaya tree":
+                papayaCount++;
+                configManager.setConfiguration("petRollCounter","papayaCount",papayaCount);
+                break;
+            case "apple tree":
+                appleCount++;
+                configManager.setConfiguration("petRollCounter","appleCount",appleCount);
+                break;
+            case "teak tree":
+                teakCount++;
+                configManager.setConfiguration("petRollCounter","teakCount",teakCount);
+                break;
+            case "mahogany tree":
+                mahoganyCount++;
+                configManager.setConfiguration("petRollCounter","mahoganyCount",mahoganyCount);
+                break;
+            case "redwood tree":
+                redwoodCount++;
+                configManager.setConfiguration("petRollCounter","redwoodCount",redwoodCount);
+                break;
+            case "calquat tree":
+                calquatCount++;
+                configManager.setConfiguration("petRollCounter","calquatCount",calquatCount);
+                break;
+            case "willow tree":
+                willowCount++;
+                configManager.setConfiguration("petRollCounter","willowCount",willowCount);
+                break;
+            case "magic tree":
+                magicCount++;
+                configManager.setConfiguration("petRollCounter","magicCount",magicCount);
+                break;
+            case "yew tree":
+                yewCount++;
+                configManager.setConfiguration("petRollCounter","yewCount",yewCount);
+                break;
+            case "celastrus tree":
+                celastrusCount++;
+                configManager.setConfiguration("petRollCounter","celastrusCount",celastrusCount);
+                break;
+            case "hespori":
+                hesporiCount++;
+                configManager.setConfiguration("petRollCounter","hesporiCount",hesporiCount);
+            default:
+                // not a tracked tree
+                break;
+        }
+
+        // update session and clear state
+        sessionCount++;
+        lastFarmingXp   = xp;
+        lastCheckTarget = null;
+    }
+
+    public int getSessionCount() { return sessionCount; }
     public Instant getSessionStart() { return sessionStart; }
 
     @Provides
-    public PetRollCounterConfig provideConfig(ConfigManager manager)
+    public PetRollCounterConfig provideConfig(ConfigManager mgr)
     {
-        return manager.getConfig(PetRollCounterConfig.class);
+        return mgr.getConfig(PetRollCounterConfig.class);
     }
 }
