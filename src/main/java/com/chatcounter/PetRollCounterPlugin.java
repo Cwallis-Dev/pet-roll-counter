@@ -24,12 +24,8 @@ public class PetRollCounterPlugin extends Plugin
     @Inject private OverlayManager overlayManager;
     @Inject private PetRollCounterOverlay overlay;
 
-    private boolean seaweedReady,
-            cactusReady,
-            belladonnaReady,
-            mushroomReady,
-            papayaReady,
-            appleReady;
+    private boolean seaweedReady;
+    private boolean mushroomReady;
 
     private int seaweedCount,
             cactusCount,
@@ -37,6 +33,15 @@ public class PetRollCounterPlugin extends Plugin
             mushroomCount,
             papayaCount,
             appleCount,
+            teakCount,
+            mahoganyCount,
+            redwoodCount,
+            calquatCount,
+            hesporiCount,
+            willowCount,
+            magicCount,
+            yewCount,
+            celastrusCount,
             sessionCount;
 
     private Instant sessionStart;
@@ -44,23 +49,27 @@ public class PetRollCounterPlugin extends Plugin
     @Override
     protected void startUp() throws Exception
     {
-        // Load persisted totals
         seaweedCount    = config.seaweedCount();
         cactusCount     = config.cactusCount();
         belladonnaCount = config.belladonnaCount();
         mushroomCount   = config.mushroomCount();
         papayaCount     = config.papayaCount();
         appleCount      = config.appleCount();
+        teakCount       = config.teakCount();
+        mahoganyCount   = config.mahoganyCount();
+        redwoodCount    = config.redwoodCount();
+        calquatCount    = config.calquatCount();
+        hesporiCount    = config.hesporiCount();
+        willowCount     = config.willowCount();
+        magicCount      = config.magicCount();
+        yewCount        = config.yewCount();
+        celastrusCount  = config.celastrusCount();
 
-        // All patches ready immediately after login
-        seaweedReady = cactusReady = belladonnaReady =
-                mushroomReady = papayaReady = appleReady = true;
-
-        // Start session counter
+        seaweedReady = true;
+        mushroomReady = true;
         sessionCount = 0;
         sessionStart = Instant.now();
 
-        // Always register overlay; it will hide itself if disabled
         overlayManager.add(overlay);
     }
 
@@ -81,7 +90,7 @@ public class PetRollCounterPlugin extends Plugin
 
         String msg = event.getMessage().toLowerCase(Locale.ROOT);
 
-        // SEAWEED
+        // Seaweed
         if (msg.contains("you plant a seaweed spore"))
         {
             seaweedReady = true;
@@ -89,39 +98,29 @@ public class PetRollCounterPlugin extends Plugin
         else if (msg.contains("you pick some giant seaweed") && seaweedReady)
         {
             seaweedReady = false;
-            seaweedCount++;
-            sessionCount++;
+            seaweedCount++; sessionCount++;
             configManager.setConfiguration("petRollCounter", "seaweedCount", seaweedCount);
         }
 
-        // CACTUS
-        if (msg.equals("you plant a cactus seed in the patch."))
+        // Cactus
+        if (msg.equals("you pick some cactus spines."))
         {
-            cactusReady = true;
-        }
-        else if (msg.equals("you pick some cactus spines.") && cactusReady)
-        {
-            cactusReady = false;
-            cactusCount++;
-            sessionCount++;
+            cactusCount++; sessionCount++;
             configManager.setConfiguration("petRollCounter", "cactusCount", cactusCount);
         }
 
-        // BELLADONNA
-        if (msg.equals("you plant a cave nightshade seed in the patch."))
+        // Belladonna
+        if (msg.equals("you harvest some cave nightshade."))
         {
-            belladonnaReady = true;
-        }
-        else if (msg.equals("you harvest some cave nightshade.") && belladonnaReady)
-        {
-            belladonnaReady = false;
-            belladonnaCount++;
-            sessionCount++;
+            belladonnaCount++; sessionCount++;
             configManager.setConfiguration("petRollCounter", "belladonnaCount", belladonnaCount);
         }
 
-        // MUSHROOM
-        if (msg.equals("you plant a bittercap mushroom spore in the patch."))
+        //
+        // MUSHROOM: one line per harvest
+        //
+
+        if (msg.contains("you plant a bittercap mushroom"))
         {
             mushroomReady = true;
         }
@@ -133,42 +132,87 @@ public class PetRollCounterPlugin extends Plugin
             configManager.setConfiguration("petRollCounter", "mushroomCount", mushroomCount);
         }
 
-        // PAPAYA TREE
-        if (msg.equals("you plant a papaya tree sapling in the patch."))
+        // Papaya
+        if (msg.equals("you examine the health of the papaya tree."))
         {
-            papayaReady = true;
-        }
-        else if (msg.equals("you examine the health of the papaya tree.") && papayaReady)
-        {
-            papayaReady = false;
-            papayaCount++;
-            sessionCount++;
+            papayaCount++; sessionCount++;
             configManager.setConfiguration("petRollCounter", "papayaCount", papayaCount);
         }
 
-        // APPLE TREE
-        if (msg.equals("you plant an apple tree sapling in the patch."))
+        // Apple
+        if (msg.equals("you examine the health of the apple tree."))
         {
-            appleReady = true;
-        }
-        else if (msg.equals("you examine the health of the apple tree.") && appleReady)
-        {
-            appleReady = false;
-            appleCount++;
-            sessionCount++;
+            appleCount++; sessionCount++;
             configManager.setConfiguration("petRollCounter", "appleCount", appleCount);
         }
+
+        // Teak
+        if (msg.equals("you examine the health of the teak tree."))
+        {
+            teakCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter", "teakCount", teakCount);
+        }
+
+        // Mahogany
+        if (msg.equals("you examine the health of the mahogany tree."))
+        {
+            mahoganyCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter", "mahoganyCount", mahoganyCount);
+        }
+
+        // Redwood
+        if (msg.equals("you examine the health of the redwood tree."))
+        {
+            redwoodCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter", "redwoodCount", redwoodCount);
+        }
+
+        // Calquat
+        if (msg.equals("you examine the calquat tree for signs of disease and find that it is in perfect health."))
+        {
+            calquatCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter", "calquatCount", calquatCount);
+        }
+
+        // Hespori
+        if (msg.contains("you harvest the hespori"))
+        {
+            hesporiCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter", "hesporiCount", hesporiCount);
+        }
+
+        // Willow
+        if (msg.equals("you examine the health of the willow tree."))
+        {
+            willowCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter", "willowCount", willowCount);
+        }
+
+        // Magic
+        if (msg.equals("you examine the health of the magic tree."))
+        {
+            magicCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter", "magicCount", magicCount);
+        }
+
+        // Yew
+        if (msg.equals("you examine the health of the yew tree."))
+        {
+            yewCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter", "yewCount", yewCount);
+        }
+
+        // Celastrus
+        if (msg.equals("you examine the health of the celastrus tree."))
+        {
+            celastrusCount++; sessionCount++;
+            configManager.setConfiguration("petRollCounter", "celastrusCount", celastrusCount);
+        }
     }
 
-    public int getSessionCount()
-    {
-        return sessionCount;
-    }
+    public int getSessionCount() { return sessionCount; }
 
-    public Instant getSessionStart()
-    {
-        return sessionStart;
-    }
+    public Instant getSessionStart() { return sessionStart; }
 
     @Provides
     public PetRollCounterConfig provideConfig(ConfigManager manager)
