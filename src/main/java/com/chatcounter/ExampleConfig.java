@@ -1,4 +1,4 @@
-package com.example;
+package com.chatcounter;
 
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
@@ -8,7 +8,7 @@ import net.runelite.client.config.ConfigItem;
 public interface ExampleConfig extends Config
 {
 	@ConfigItem(
-		keyName = "greeting",
+		keyName = "greeting123",
 		name = "Welcome Greeting",
 		description = "The message to show to the user when they login"
 	)
