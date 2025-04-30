@@ -78,7 +78,6 @@ public class PetRollCounterPlugin extends Plugin
         lastFarmingXp  = -1;
 
         // ** Populate your panel immediately **
-        int lvl = 99;
         refreshPanel();
     }
 
