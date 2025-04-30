@@ -5,12 +5,13 @@ import java.time.Instant;
 import java.util.Locale;
 import javax.inject.Inject;
 
+import net.runelite.api.Client;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Skill;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.StatChanged;
-
+import com.chatcounter.ui.PetRollCounterPanel;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -19,24 +20,27 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
 
 @PluginDescriptor(
-        name = "Pet Roll Counter",
+        name = "Tangletracker",
         description = "Tracks Tangleroot pet-roll attempts",
         tags = {"pet","farming","counter"}
 )
 public class PetRollCounterPlugin extends Plugin
 {
+    @Inject private Client client;
     @Inject private ConfigManager configManager;
     @Inject private PetRollCounterConfig config;
     @Inject private OverlayManager overlayManager;
     @Inject private PetRollCounterOverlay overlay;
 
+
     // Chat-based flags
     private boolean seaweedReady = true, mushroomReady = true;
 
-    // Last tree clicked “check-health” on
+    //Tree Click
     private String lastCheckTarget = null;
     private long    lastCheckTime = 0L;
-    // Last seen Farming XP
+
+    //Baseline xp
     private int lastFarmingXp = -1;
 
     // Counters
@@ -241,7 +245,51 @@ public class PetRollCounterPlugin extends Plugin
         lastFarmingXp   = xp;
         lastCheckTarget = null;
     }
+    // === DROP-RATE FORMULAS ===
 
+    private int rate(int base)
+    {
+        int lvl = client.getRealSkillLevel(Skill.FARMING);
+        return Math.max(1, base - lvl * 25);
+    }
+
+    public int getRateSeaweed()    { return rate(7500); }
+    public int getRateMushroom()   { return rate(7500); }
+    public int getRateCactus()     { return rate(7000); }
+    public int getRateBelladonna() { return rate(8000); }
+    public int getRatePapaya()     { return rate(9000); }
+    public int getRateApple()      { return rate(9000); }
+    public int getRateTeak()       { return rate(5000); }
+    public int getRateMahogany()   { return rate(5000); }
+    public int getRateRedwood()    { return rate(5000); }
+    public int getRateCalquat()    { return rate(6000); }
+    public int getRateWillow()     { return rate(16059); }
+    public int getRateMagic()      { return rate(9368); }
+    public int getRateYew()        { return rate(11242); }
+    public int getRateCelastrus()  { return rate(9000); }
+    public int getRateHespori()    { return rate(7000); }
+
+    /** Combined chance of at least one roll succeeding across all counts **/
+    public double getCombinedChance()
+    {
+        double product = 1.0;
+        product *= Math.pow(1 - 1.0/getRateSeaweed(),    seaweedCount);
+        product *= Math.pow(1 - 1.0/getRateMushroom(),   mushroomCount);
+        product *= Math.pow(1 - 1.0/getRateCactus(),     cactusCount);
+        product *= Math.pow(1 - 1.0/getRateBelladonna(), belladonnaCount);
+        product *= Math.pow(1 - 1.0/getRatePapaya(),     papayaCount);
+        product *= Math.pow(1 - 1.0/getRateApple(),      appleCount);
+        product *= Math.pow(1 - 1.0/getRateTeak(),       teakCount);
+        product *= Math.pow(1 - 1.0/getRateMahogany(),   mahoganyCount);
+        product *= Math.pow(1 - 1.0/getRateRedwood(),    redwoodCount);
+        product *= Math.pow(1 - 1.0/getRateCalquat(),    calquatCount);
+        product *= Math.pow(1 - 1.0/getRateWillow(),     willowCount);
+        product *= Math.pow(1 - 1.0/getRateMagic(),      magicCount);
+        product *= Math.pow(1 - 1.0/getRateYew(),        yewCount);
+        product *= Math.pow(1 - 1.0/getRateCelastrus(),  celastrusCount);
+        product *= Math.pow(1 - 1.0/getRateHespori(),    hesporiCount);
+        return 1.0 - product;
+    }
     public int getSessionCount() { return sessionCount; }
     public Instant getSessionStart() { return sessionStart; }
 
